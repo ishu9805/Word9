@@ -5,8 +5,8 @@ import random
 import os
 from threading import Thread
 from flask import Flask
-from pyrogram.types import ChatAction
 from pyrogram.types import ReplyKeyboardMarkup, KeyboardButton
+
 # nltk
 nltk.download("words")
 
@@ -33,11 +33,7 @@ min_length_pattern = r"include at least (\d+) letters"
 trigger_pattern = r"Turn: 𖤍 Bʟᴀᴅᴇ ꭙ Nᴀʀᴜᴛᴏ┆❦.*" # Replace "ᖇᗩᕼᑌᒪ" with your own trigger pattern (Your telegram profile name)
 
 
-@app.on_message(filters.me & filters.command("ping", prefixes="!"))
-async def start(client, message):
-    await message.edit("pong!")
-
-
+# Modify the handle_incoming_message function
 @app.on_message(filters.text)
 async def handle_incoming_message(client, message):
     puzzle_text = message.text
@@ -57,7 +53,7 @@ async def handle_incoming_message(client, message):
                 random_word = random.choice(valid_words)
 
                 # Indicate typing action
-                await client.send_chat_action(message.chat.id, action=ChatAction.TYPING)
+                await client.send_chat_action(message.chat.id, action="typing")
 
                 # Create a ReplyKeyboardMarkup with the word as a button
                 keyboard = ReplyKeyboardMarkup(
@@ -72,8 +68,8 @@ async def handle_incoming_message(client, message):
                 print("No valid words found for the given criteria.")
         else:
             print("Criteria not found in the puzzle text.")
-    
-    
+
+
 def run():
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
 
