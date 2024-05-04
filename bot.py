@@ -53,7 +53,9 @@ async def handle_incoming_message(client, message):
                 random_word = random.choice(valid_words)
 
                 # Indicate typing action
-                await client.send_chat_action(message.chat.id, action="typing")
+                # Indicate typing action
+                await app.send_chat_action(message.chat.id, action="typing")
+
 
                 # Create a ReplyKeyboardMarkup with the word as a button
                 keyboard = ReplyKeyboardMarkup(
@@ -63,7 +65,7 @@ async def handle_incoming_message(client, message):
                 )
 
                 # Send the word as a keyboard input
-                await client.send_message(message.chat.id, "Here's the word:", reply_markup=keyboard)
+                await app.send_message(message.chat.id, "Here's the word:", reply_markup=keyboard)
             else:
                 print("No valid words found for the given criteria.")
         else:
