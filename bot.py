@@ -56,9 +56,8 @@ def handle_incoming_message(client, message):
                 # Select 2 random words
                 random_words = random.sample(valid_words, min(2, len(valid_words)))
 
-                # Send the random words one by one via DM
-                for word in random_words:
-                    client.send_message(message.from_user.id, word)
+                response_message = f"{random_word}"
+                client.send_message(message.chat.id, response_message)
             else:
                 print("No valid words found for the given criteria.")
         else:
