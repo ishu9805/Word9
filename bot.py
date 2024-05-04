@@ -5,7 +5,7 @@ import random
 import os
 from threading import Thread
 from flask import Flask
-from pyrogram import ChatAction
+from pyrogram.types import ChatAction
 from pyrogram.types import ReplyKeyboardMarkup, KeyboardButton
 # nltk
 nltk.download("words")
