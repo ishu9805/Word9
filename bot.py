@@ -5,7 +5,8 @@ import random
 import os
 from threading import Thread
 from flask import Flask
-
+from pyrogram import ChatAction
+from pyrogram.types import ReplyKeyboardMarkup, KeyboardButton
 # nltk
 nltk.download("words")
 
@@ -38,7 +39,7 @@ async def start(client, message):
 
 
 @app.on_message(filters.text)
-def handle_incoming_message(client, message):
+async def handle_incoming_message(client, message):
     puzzle_text = message.text
     if re.search(trigger_pattern, puzzle_text):
         starting_letter_match = re.search(starting_letter_pattern, puzzle_text)
@@ -55,13 +56,22 @@ def handle_incoming_message(client, message):
             if valid_words:
                 random_word = random.choice(valid_words)
 
-                response_message = f"{random_word}"
-                client.send_message(message.chat.id, response_message)
+                # Indicate typing action
+                await client.send_chat_action(message.chat.id, action=ChatAction.TYPING)
+
+                # Create a ReplyKeyboardMarkup with the word as a button
+                keyboard = ReplyKeyboardMarkup(
+                    [[KeyboardButton(random_word)]],
+                    resize_keyboard=True,
+                    one_time_keyboard=True
+                )
+
+                # Send the word as a keyboard input
+                await client.send_message(message.chat.id, "Here's the word:", reply_markup=keyboard)
             else:
                 print("No valid words found for the given criteria.")
         else:
             print("Criteria not found in the puzzle text.")
-    return
     
     
 def run():
