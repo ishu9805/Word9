@@ -29,7 +29,7 @@ def home():
 
 starting_letter_pattern = r"start with ([A-Z])"
 min_length_pattern = r"include at least (\d+) letters"
-trigger_pattern = r"Turn: ᖇᗩᕼᑌᒪ.*" # Replace "ᖇᗩᕼᑌᒪ" with your own trigger pattern (Your telegram profile name)
+trigger_pattern = r"Turn: 𖤍 Bʟᴀᴅᴇ ꭙ Nᴀʀᴜᴛᴏ┆❦.*" # Replace "ᖇᗩᕼᑌᒪ" with your own trigger pattern (Your telegram profile name)
 
 
 @app.on_message(filters.me & filters.command("ping", prefixes="!"))
