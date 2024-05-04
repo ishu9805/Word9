@@ -53,12 +53,12 @@ def handle_incoming_message(client, message):
             valid_words = [word for word in english_words if word.startswith(starting_letter) and len(word) >= min_length]
 
             if valid_words:
-                # Select 5 random words
-                random_words = random.sample(valid_words, min(5, len(valid_words)))
+                # Select 2 random words
+                random_words = random.sample(valid_words, min(2, len(valid_words)))
 
-                # Send the random words via DM
+                # Send the random words one by one via DM
                 for word in random_words:
-                    app.send_message(message.from_user.id, word)
+                    client.send_message(message.from_user.id, word)
             else:
                 print("No valid words found for the given criteria.")
         else:
