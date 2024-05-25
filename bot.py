@@ -53,10 +53,9 @@ def handle_incoming_message(client, message):
             valid_words = [word for word in english_words if word.startswith(starting_letter) and len(word) >= min_length]
 
             if valid_words:
-                # Select 2 random words
-                random_words = random.sample(valid_words, min(2, len(valid_words)))
+                random_word = random.choice(valid_words)
 
-                response_message = f"{random_words}"
+                response_message = f"{random_word}"
                 client.send_message(message.chat.id, response_message)
             else:
                 print("No valid words found for the given criteria.")
