@@ -52,14 +52,24 @@ def handle_incoming_message(client, message):
                 for idx, word in enumerate(selected_words):
                     response_message = f"Word {idx + 1}: {word}"
                     client.send_message(message.chat.id, response_message)
-                # Copy the first word to clipboard
-                pyperclip.copy(selected_words[0])
             else:
                 print("No valid words found for the given criteria.")
         else:
             print("Criteria not found in the puzzle text.")
     return
     
+@app.on_message(filters.text & ~filters.me)
+def handle_button_click(client, message):
+    if message.text.startswith("Word"):
+        word_index = re.findall(r"Word (\d+)", message.text)
+        if word_index:
+            word_index = int(word_index[0]) - 1
+            words = message.text.split(": ")[1].split(", ")
+            if len(words) > word_index:
+                selected_word = words[word_index]
+                pyperclip.copy(selected_word)
+                client.send_message(message.chat.id, f"Word '{selected_word}' copied to clipboard!")
+
 def run():
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
 
