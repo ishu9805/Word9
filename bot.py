@@ -12,7 +12,7 @@ nltk.download("words")
 
 API_ID = os.environ.get("API_ID") 
 API_HASH = os.environ.get("API_HASH") 
-TOKEN = os.envirob.get("BOT_TOKEN")
+TOKEN = os.environ.get("BOT_TOKEN")
 
 # Bot
 app = Client("word9", api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
