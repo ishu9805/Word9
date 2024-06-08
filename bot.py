@@ -50,7 +50,7 @@ def handle_incoming_message(client, message):
                 # Randomly choose 5 words
                 selected_words = random.sample(valid_words, min(5, len(valid_words)))
                 response_markup = generate_response_buttons(selected_words)
-                response_message = "Choose a word to copy:"
+                response_message = "Choose a word:"
                 client.send_message(message.chat.id, response_message, reply_markup=response_markup)
             else:
                 print("No valid words found for the given criteria.")
@@ -69,7 +69,7 @@ async def callback_query(client, callback_query):
     selected_word = callback_query.data.split("_")[1]
     await callback_query.answer()
     await callback_query.edit_message_text(selected_word)
-    await callback_query.message.reply_text(f"Word '{selected_word}' copied to clipboard!")
+    await callback_query.message.reply_text(f"Selected word: {selected_word}")
 
 def run():
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
@@ -78,4 +78,4 @@ if __name__ == "__main__":
     t = Thread(target=run)
     t.start()
     app.run()
-                
+            
