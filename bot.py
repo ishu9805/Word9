@@ -1,5 +1,3 @@
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-
 from pyrogram import Client, filters
 import re
 import nltk
@@ -8,6 +6,7 @@ import os
 from threading import Thread
 from flask import Flask
 import pyperclip
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 # nltk
 nltk.download("words")
@@ -68,6 +67,7 @@ def generate_response_buttons(words):
 
 @app.on_callback_query()
 async def callback_query(client, callback_query):
+    print("Callback query received:", callback_query.data)
     selected_word = callback_query.data.split("_")[1]
     await callback_query.answer()
     await callback_query.edit_message_text(selected_word)
@@ -81,4 +81,4 @@ if __name__ == "__main__":
     t = Thread(target=run)
     t.start()
     app.run()
-                
+            
