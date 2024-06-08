@@ -49,26 +49,28 @@ def handle_incoming_message(client, message):
             if valid_words:
                 # Randomly choose 5 words
                 selected_words = random.sample(valid_words, min(5, len(valid_words)))
-                for idx, word in enumerate(selected_words):
-                    response_message = f"Word {idx + 1}: {word}"
-                    client.send_message(message.chat.id, response_message)
+                response_markup = generate_response_buttons(selected_words)
+                response_message = "Choose a word to copy:"
+                client.send_message(message.chat.id, response_message, reply_markup=response_markup)
             else:
                 print("No valid words found for the given criteria.")
         else:
             print("Criteria not found in the puzzle text.")
     return
     
-@app.on_message(filters.text & ~filters.me)
-def handle_button_click(client, message):
-    if message.text.startswith("Word"):
-        word_index = re.findall(r"Word (\d+)", message.text)
-        if word_index:
-            word_index = int(word_index[0]) - 1
-            words = message.text.split(": ")[1].split(", ")
-            if len(words) > word_index:
-                selected_word = words[word_index]
-                pyperclip.copy(selected_word)
-                client.send_message(message.chat.id, f"Word '{selected_word}' copied to clipboard!")
+def generate_response_buttons(words):
+    keyboard = []
+    for idx, word in enumerate(words):
+        keyboard.append([InlineKeyboardButton(word, callback_data=f"word_{idx}")])
+    return InlineKeyboardMarkup(keyboard)
+
+@app.on_callback_query()
+async def callback_query(client, callback_query):
+    selected_word = callback_query.data.split("_")[1]
+    await callback_query.answer()
+    await callback_query.edit_message_text(selected_word)
+    pyperclip.copy(selected_word)
+    await callback_query.message.reply_text(f"Word '{selected_word}' copied to clipboard!")
 
 def run():
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
@@ -77,3 +79,4 @@ if __name__ == "__main__":
     t = Thread(target=run)
     t.start()
     app.run()
+                
