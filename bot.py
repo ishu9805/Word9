@@ -12,15 +12,10 @@ nltk.download("words")
 
 API_ID = os.environ.get("API_ID") 
 API_HASH = os.environ.get("API_HASH") 
-SESSION = os.environ.get("SESSION")
+TOKEN = os.envirob.get("BOT_TOKEN")
 
 # Bot
-app = Client(
-    "word9",
-    api_id=API_ID,
-    api_hash=API_HASH,
-    session_string=SESSION
-)
+app = Client("word9", api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
 
 server = Flask(__name__)
 
