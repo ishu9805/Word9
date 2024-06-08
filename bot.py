@@ -31,12 +31,6 @@ trigger_pattern = r"Turn: .*" # Replace "ᖇᗩᕼᑌᒪ" with your own trigger 
 async def start(client, message):
     await message.edit("pong!")
 
-def generate_response_buttons(words):
-    keyboard = []
-    for idx, word in enumerate(words):
-        keyboard.append([InlineKeyboardButton(word, callback_data=f"word_{idx}")])
-    return InlineKeyboardMarkup(keyboard)
-
 @app.on_message(filters.text)
 def handle_incoming_message(client, message):
     puzzle_text = message.text
@@ -55,25 +49,16 @@ def handle_incoming_message(client, message):
             if valid_words:
                 # Randomly choose 5 words
                 selected_words = random.sample(valid_words, min(5, len(valid_words)))
-                response_markup = generate_response_buttons(selected_words)
-                response_message = "Choose a word to copy:"
-                client.send_message(message.chat.id, response_message, reply_markup=response_markup)
+                response_message = "\n".join(selected_words)
+                client.send_message(message.chat.id, response_message)
+                # Copy the first word to clipboard
+                pyperclip.copy(selected_words[0])
             else:
                 print("No valid words found for the given criteria.")
         else:
             print("Criteria not found in the puzzle text.")
     return
     
-@app.on_callback_query()
-async def callback_query(client, callback_query):
-    selected_word = callback_query.data.split("_")[1]
-    await callback_query.answer()
-    await callback_query.edit_message_text(selected_word)
-    
-    # If the selected word matches the trigger pattern, copy it to the clipboard
-    if re.search(trigger_pattern, selected_word):
-        pyperclip.copy(selected_word)
-
 def run():
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
 
@@ -81,4 +66,4 @@ if __name__ == "__main__":
     t = Thread(target=run)
     t.start()
     app.run()
-            
+        
