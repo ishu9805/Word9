@@ -50,7 +50,7 @@ def handle_incoming_message(client, message):
                 selected_words = random.sample(valid_words, min(5, len(valid_words)))
                 response_message = "Words:\n"
                 for word in selected_words:
-                    response_message += f"\n- {word}\nCopy-String: {word}\n"
+                    response_message += f"\n- {word}\nCopy-String: '{word}'\n"
                 client.send_message(message.chat.id, response_message)
             else:
                 print("No valid words found for the given criteria.")
