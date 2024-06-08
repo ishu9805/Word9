@@ -5,7 +5,7 @@ import random
 import os
 from threading import Thread
 from flask import Flask
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+import pyperclip
 
 # nltk
 nltk.download("words")
@@ -69,6 +69,10 @@ async def callback_query(client, callback_query):
     selected_word = callback_query.data.split("_")[1]
     await callback_query.answer()
     await callback_query.edit_message_text(selected_word)
+    
+    # If the selected word matches the trigger pattern, copy it to the clipboard
+    if re.search(trigger_pattern, selected_word):
+        pyperclip.copy(selected_word)
 
 def run():
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
