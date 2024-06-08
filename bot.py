@@ -49,8 +49,9 @@ def handle_incoming_message(client, message):
             if valid_words:
                 # Randomly choose 5 words
                 selected_words = random.sample(valid_words, min(5, len(valid_words)))
-                response_message = "\n".join(selected_words)
-                client.send_message(message.chat.id, response_message)
+                for idx, word in enumerate(selected_words):
+                    response_message = f"Word {idx + 1}: {word}"
+                    client.send_message(message.chat.id, response_message)
                 # Copy the first word to clipboard
                 pyperclip.copy(selected_words[0])
             else:
@@ -66,4 +67,3 @@ if __name__ == "__main__":
     t = Thread(target=run)
     t.start()
     app.run()
-        
