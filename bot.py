@@ -1,3 +1,5 @@
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
 from pyrogram import Client, filters
 import re
 import nltk
