@@ -48,13 +48,13 @@ def get_combined_word_list():
 
 @app.on_message(filters.command("ping"))
 async def start(client, message):
-    await message.edit("pong!")
+    await client.send_message("pong!")
 
 @app.on_message(filters.command("resetwords"))
 async def reset_used_words(client, message):
     global used_words
     used_words.clear()
-    await message.edit("Used words list has been reset.")
+    await client.send_message("Used words list has been reset.")
 
 @app.on_message(filters.text)
 def handle_incoming_message(client, message):
