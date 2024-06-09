@@ -74,7 +74,7 @@ def handle_incoming_message(client, message):
 
             if valid_words:
                 # Randomly choose 5 words
-                selected_words = random.sample(valid_words, min(2, len(valid_words)))
+                selected_words = random.sample(valid_words, min(1, len(valid_words)))
                 
                 # Add selected words to the set of used words
                 used_words.update(selected_words)
