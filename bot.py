@@ -46,11 +46,14 @@ def get_combined_word_list():
     combined_words = nltk_words | external_words
     return combined_words
 
-@app.on_message(filters.command("ping"))
+def remove_hyphen(word):
+    return word.replace("-", "")
+
+@app.on_message(filters.me & filters.command("ping", prefixes="!"))
 async def start(client, message):
     await message.edit("pong!")
 
-@app.on_message(filters.command("resetwords"))
+@app.on_message(filters.me & filters.command("resetwords", prefixes="!"))
 async def reset_used_words(client, message):
     global used_words
     used_words.clear()
@@ -70,11 +73,12 @@ def handle_incoming_message(client, message):
             combined_words = get_combined_word_list()
             
             # Filter valid words based on criteria
-            valid_words = [word for word in combined_words if word.startswith(starting_letter) and len(word) >= min_length and word not in used_words]
+            valid_words = [remove_hyphen(word) for word in combined_words if "-" in word]
+            valid_words = [word for word in valid_words if word.startswith(starting_letter) and len(word) >= min_length and word not in used_words]
 
             if valid_words:
                 # Randomly choose 5 words
-                selected_words = random.sample(valid_words, min(2, len(valid_words)))
+                selected_words = random.sample(valid_words, min(5, len(valid_words)))
                 
                 # Add selected words to the set of used words
                 used_words.update(selected_words)
@@ -96,4 +100,4 @@ if __name__ == "__main__":
     t = Thread(target=run)
     t.start()
     app.run()
-            
+    
