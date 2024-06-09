@@ -3,32 +3,58 @@ import re
 import nltk
 import random
 import os
+import requests
 from threading import Thread
 from flask import Flask
 
-# nltk
+# Download the nltk words dataset
 nltk.download("words")
 
-API_ID = os.environ.get("API_ID") 
-API_HASH = os.environ.get("API_HASH") 
+# Retrieve API credentials from environment variables
+API_ID = os.environ.get("API_ID")
+API_HASH = os.environ.get("API_HASH")
 TOKEN = os.environ.get("BOT_TOKEN")
 
-# Bot
+# Initialize the Pyrogram client
 app = Client("word9", api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
 
+# Initialize the Flask server
 server = Flask(__name__)
 
 @server.route("/")
 def home():
     return "Bot is running"
 
+# Define regex patterns
 starting_letter_pattern = r"start with ([A-Z])"
 min_length_pattern = r"include at least (\d+) letters"
-trigger_pattern = r"Turn: .*" # Replace "ᖇᗩᕼᑌᒪ" with your own trigger pattern (Your telegram profile name)
+trigger_pattern = r"Turn: .*" # Replace "Turn: .*" with your specific trigger pattern
+
+# Set to keep track of used words
+used_words = set()
+
+def get_combined_word_list():
+    # Fetch words from NLTK
+    nltk_words = set(nltk.corpus.words.words())
+    
+    # Fetch words from the external URL
+    url = "https://raw.githubusercontent.com/dwyl/english-words/master/words.txt"
+    response = requests.get(url)
+    external_words = set(response.text.splitlines())
+    
+    # Combine both sets of words
+    combined_words = nltk_words | external_words
+    return combined_words
 
 @app.on_message(filters.me & filters.command("ping", prefixes="!"))
 async def start(client, message):
     await message.edit("pong!")
+
+@app.on_message(filters.me & filters.command("resetwords", prefixes="!"))
+async def reset_used_words(client, message):
+    global used_words
+    used_words.clear()
+    await message.edit("Used words list has been reset.")
 
 @app.on_message(filters.text)
 def handle_incoming_message(client, message):
@@ -41,21 +67,26 @@ def handle_incoming_message(client, message):
             starting_letter = starting_letter_match.group(1)
             min_length = int(min_length_match.group(1))
 
-            english_words = set(nltk.corpus.words.words())
-
-            valid_words = [word for word in english_words if word.startswith(starting_letter) and len(word) >= min_length]
+            combined_words = get_combined_word_list()
+            
+            # Filter valid words based on criteria
+            valid_words = [word for word in combined_words if word.startswith(starting_letter) and len(word) >= min_length and word not in used_words]
 
             if valid_words:
                 # Randomly choose 5 words
-                selected_words = random.sample(valid_words, min(5, len(valid_words)))
+                selected_words = random.sample(valid_words, min(2, len(valid_words)))
+                
+                # Add selected words to the set of used words
+                used_words.update(selected_words)
+                
                 response_message = "Words:\n"
                 for word in selected_words:
                     response_message += f"\n- {word}\nCopy-String: {word}\n"
                 client.send_message(message.chat.id, response_message)
             else:
-                print("No valid words found for the given criteria.")
+                client.send_message(message.chat.id, "No valid words found for the given criteria.")
         else:
-            print("Criteria not found in the puzzle text.")
+            client.send_message(message.chat.id, "Criteria not found in the puzzle text.")
     return
 
 def run():
@@ -65,4 +96,4 @@ if __name__ == "__main__":
     t = Thread(target=run)
     t.start()
     app.run()
-                                               
+            
