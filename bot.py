@@ -46,15 +46,16 @@ def get_combined_word_list():
     combined_words = nltk_words | external_words
     return combined_words
 
-@app.on_message(filters.command("ping"))
-async def start(client, message):
-    await message.edit("pong!")
 
-@app.on_message(filters.command("resetwords"))
-async def reset_used_words(client, message):
+@app.on_message(filters.command("ping", prefixes="/"))
+async def start(bot, message):
+    await bot.send_message("pong!")
+
+@app.on_message(filters.command("resetwords", prefixes="/"))
+async def reset_used_words(bot, message):
     global used_words
     used_words.clear()
-    await message.edit("Used words list has been reset.")
+    await bot.send_message("Used words list has been reset.")
 
 @app.on_message(filters.text)
 def handle_incoming_message(client, message):
