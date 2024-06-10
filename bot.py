@@ -117,7 +117,6 @@ async def exist_word(client, message):
     else:
         await message.reply_text(f"The word '{word}' does not exist in the database.")
 
-
 @app.on_message(filters.command("stopwords"))
 async def stop_words(client, message):
     global stop_check
@@ -239,7 +238,7 @@ async def handle_incoming_message(client, message):
                 response_message = f"Word:\n\n- {selected_word}\nCopy-String: {selected_word}\n"
                 # Check if the word already exists in MongoDB
                 word_exists = word_collection.find_one({"word": selected_word})
-                if word_exists:
+                if (word_exists):
                     response_message += f"The word '{selected_word}' is already in the database.\n"
                 else:
                     # Add the selected word to MongoDB
@@ -259,3 +258,4 @@ if __name__ == "__main__":
     t = Thread(target=run)
     t.start()
     app.run()
+    
