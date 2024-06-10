@@ -58,14 +58,32 @@ async def generate_wordlist(client, message):
 
 @app.on_message(filters.command("addwords"))
 async def add_words(client, message):
-    # Split the message text to extract words
-    words_to_add = message.text.split()[1:]  # Skip the command itself
-    
-    # Add each word to the MongoDB collection
-    for word in words_to_add:
-        word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
-    
-    await message.reply_text(f"Added {len(words_to_add)} words to the database.")
+    # Check if the message contains a document (txt file)
+    if message.document and message.document.file_name.endswith('.txt'):
+        # Download the document
+        document = await message.download()
+        
+        # Read words from the text file
+        with open(document, 'r') as file:
+            words_to_add = file.read().splitlines()
+        
+        # Add each word to the MongoDB collection
+        for word in words_to_add:
+            word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
+        
+        await message.reply_text(f"Added {len(words_to_add)} words from the text file to the database.")
+        
+        # Remove the downloaded document
+        os.remove(document)
+    else:
+        # Split the message text to extract words
+        words_to_add = message.text.split()[1:]  # Skip the command itself
+        
+        # Add each word to the MongoDB collection
+        for word in words_to_add:
+            word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
+        
+        await message.reply_text(f"Added {len(words_to_add)} words to the database.")
 
 @app.on_message(filters.text)
 async def handle_incoming_message(client, message):
