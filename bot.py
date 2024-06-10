@@ -6,6 +6,7 @@ import os
 import requests
 from threading import Thread
 from flask import Flask
+from pymongo import MongoClient
 
 # Download the nltk words dataset
 nltk.download("words")
@@ -14,12 +15,18 @@ nltk.download("words")
 API_ID = os.environ.get("API_ID")
 API_HASH = os.environ.get("API_HASH")
 TOKEN = os.environ.get("BOT_TOKEN")
+MONGO_URI = os.environ.get("MONGO_URI")
 
 # Initialize the Pyrogram client
 app = Client("word9", api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
 
 # Initialize the Flask server
 server = Flask(__name__)
+
+# MongoDB client
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client["word_database"]
+word_collection = db["words"]
 
 @server.route("/")
 def home():
@@ -33,30 +40,30 @@ trigger_pattern = r"Turn: .*"  # Replace "Turn: .*" with your specific trigger p
 # Set to keep track of used words
 used_words = set()
 
-# Global variable to store combined words
-combined_words = set()
+def fetch_and_store_words():
+    # Fetch words from NLTK
+    nltk_words = set(nltk.corpus.words.words())
+    
+    # Fetch words from the external URLs
+    urls = [
+        "https://raw.githubusercontent.com/dwyl/english-words/master/words.txt",
+        "https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english.txt"
+    ]
+    external_words = set()
+    for url in urls:
+        response = requests.get(url)
+        external_words.update(response.text.splitlines())
+    
+    # Combine both sets of words
+    combined_words = nltk_words | external_words
+    
+    # Store words in MongoDB
+    for word in combined_words:
+        word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
 
 def get_combined_word_list():
-    global combined_words
-    if not combined_words:
-        # Fetch words from NLTK
-        nltk_words = set(nltk.corpus.words.words())
-        
-        # Fetch words from the external URL
-        urls = [
-            "https://raw.githubusercontent.com/dwyl/english-words/master/words.txt",
-            "https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english.txt",
-            "https://github.com/openethereum/wordlist/blob/master/res/wordlist.txt",
-            "https://github.com/purcell/wordchainsrevenge/blob/master/wordlist.txt"
-        ]
-        external_words = set()
-        for url in urls:
-            response = requests.get(url)
-            external_words.update(response.text.splitlines())
-        
-        # Combine both sets of words
-        combined_words = nltk_words | external_words
-    return combined_words
+    words = word_collection.find()
+    return {word["word"] for word in words}
 
 @app.on_message(filters.command("ping"))
 async def ping(client, message):
@@ -76,6 +83,17 @@ async def generate_wordlist(client, message):
             file.write(word + "\n")
     await client.send_document(message.chat.id, "wordlist.txt")
 
+@app.on_message(filters.command("addwords"))
+async def add_words(client, message):
+    # Split the message text to extract words
+    words_to_add = message.text.split()[1:]  # Skip the command itself
+    
+    # Add each word to the MongoDB collection
+    for word in words_to_add:
+        word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
+    
+    await message.reply_text(f"Added {len(words_to_add)} words to the database.")
+
 @app.on_message(filters.text)
 async def handle_incoming_message(client, message):
     puzzle_text = message.text
@@ -94,7 +112,7 @@ async def handle_incoming_message(client, message):
 
             if valid_words:
                 # Randomly choose 5 words
-                selected_words = random.sample(valid_words, min(1, len(valid_words)))
+                selected_words = random.sample(valid_words, min(5, len(valid_words)))
                 
                 # Add selected words to the set of used words
                 used_words.update(selected_words)
@@ -113,6 +131,9 @@ def run():
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
 
 if __name__ == "__main__":
+    # Fetch and store words in MongoDB
+    fetch_and_store_words()
+    
     t = Thread(target=run)
     t.start()
     app.run()
