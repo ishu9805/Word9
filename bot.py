@@ -69,11 +69,10 @@ def fetch_words():
     return combined_words
 
 def get_combined_word_list():
-    # Fetch combined words from all sources
-    combined_words = fetch_words()
-    # Add words from MongoDB
+    # Fetch words from MongoDB only
     mongodb_words = {word["word"] for word in word_collection.find()}
-    return combined_words | mongodb_words
+    return mongodb_words
+
 
 @app.on_message(filters.command("ping"))
 async def ping(client, message):
