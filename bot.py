@@ -63,6 +63,20 @@ def get_combined_word_list():
 async def ping(client, message):
     await message.reply_text("pong!")
 
+@app.on_message(filters.command("resetwords"))
+async def reset_used_words(client, message):
+    global used_words
+    used_words.clear()
+    await message.reply_text("Used words list has been reset.")
+
+@app.on_message(filters.command("generatewordlist"))
+async def generate_wordlist(client, message):
+    combined_words = get_combined_word_list()
+    with open("wordlist.txt", "w") as file:
+        for word in combined_words:
+            file.write(word + "\n")
+    await client.send_document(message.chat.id, "wordlist.txt")
+
 @app.on_message(filters.text)
 async def handle_incoming_message(client, message):
     puzzle_text = message.text
@@ -81,7 +95,7 @@ async def handle_incoming_message(client, message):
 
             if valid_words:
                 # Randomly choose 5 words
-                selected_words = random.sample(valid_words, min(1, len(valid_words)))
+                selected_words = random.sample(valid_words, min(5, len(valid_words)))
                 
                 # Add selected words to the set of used words
                 used_words.update(selected_words)
