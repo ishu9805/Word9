@@ -129,8 +129,8 @@ async def handle_incoming_message(client, message):
             valid_words = [word for word in combined_words if word.startswith(starting_letter) and len(word) >= min_length and word not in used_words]
 
             if valid_words:
-                # Randomly choose 5 words
-                selected_words = random.sample(valid_words, min(5, len(valid_words)))
+                # Randomly choose 1 words
+                selected_words = random.sample(valid_words, min(1, len(valid_words)))
                 
                 # Add selected words to the set of used words
                 used_words.update(selected_words)
