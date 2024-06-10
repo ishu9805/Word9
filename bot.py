@@ -53,12 +53,12 @@ def fetch_words():
     words_alpha = set(response.text.splitlines())
     
     # Exclude words containing special characters
-    words_alpha_filtered = {word for word in words_alpha if all(c.isalpha() for c in word)}
+    pattern = re.compile(r"^[a-zA-Z]+$")
+    words_alpha_filtered = {word for word in words_alpha if pattern.match(word)}
     
     # Combine all sets of words
     combined_words = nltk_words | external_words | words_alpha_filtered
     return combined_words
-
 
 def get_combined_word_list():
     return fetch_words()
@@ -95,11 +95,11 @@ async def handle_incoming_message(client, message):
             combined_words = get_combined_word_list()
             
             # Filter valid words based on criteria
-            valid_words = [word for word in combined_words if "-" not in word and word.startswith(starting_letter) and len(word) >= min_length and word not in used_words]
+            valid_words = [word for word in combined_words if word.startswith(starting_letter) and len(word) >= min_length and word not in used_words]
 
             if valid_words:
                 # Randomly choose 5 words
-                selected_words = random.sample(valid_words, min(1, len(valid_words)))
+                selected_words = random.sample(valid_words, min(5, len(valid_words)))
                 
                 # Add selected words to the set of used words
                 used_words.update(selected_words)
