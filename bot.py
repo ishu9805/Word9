@@ -28,34 +28,43 @@ def home():
 # Define regex patterns
 starting_letter_pattern = r"start with ([A-Z])"
 min_length_pattern = r"include at least (\d+) letters"
-trigger_pattern = r"Turn: .*" # Replace "Turn: .*" with your specific trigger pattern
+trigger_pattern = r"Turn: .*"  # Replace "Turn: .*" with your specific trigger pattern
 
 # Set to keep track of used words
 used_words = set()
 
+# Global variable to store combined words
+combined_words = set()
+
 def get_combined_word_list():
-    # Fetch words from NLTK
-    nltk_words = set(nltk.corpus.words.words())
-    
-    # Fetch words from the external URL
-    url = "https://raw.githubusercontent.com/dwyl/english-words/master/words.txt"
-    response = requests.get(url)
-    external_words = set(response.text.splitlines())
-    
-    # Combine both sets of words
-    combined_words = nltk_words | external_words
+    global combined_words
+    if not combined_words:
+        # Fetch words from NLTK
+        nltk_words = set(nltk.corpus.words.words())
+        
+        # Fetch words from the external URL
+        urls = [
+            "https://raw.githubusercontent.com/dwyl/english-words/master/words.txt",
+            "https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english.txt"
+        ]
+        external_words = set()
+        for url in urls:
+            response = requests.get(url)
+            external_words.update(response.text.splitlines())
+        
+        # Combine both sets of words
+        combined_words = nltk_words | external_words
     return combined_words
 
 @app.on_message(filters.command("ping"))
-async def start(client, message):
-    await client.send_message("pong!")
+async def ping(client, message):
+    await message.reply_text("pong!")
 
 @app.on_message(filters.command("resetwords"))
 async def reset_used_words(client, message):
     global used_words
     used_words.clear()
-    await client.send_message("Used words list has been reset.")
-
+    await message.reply_text("Used words list has been reset.")
 
 @app.on_message(filters.command("generatewordlist"))
 async def generate_wordlist(client, message):
@@ -63,11 +72,10 @@ async def generate_wordlist(client, message):
     with open("wordlist.txt", "w") as file:
         for word in combined_words:
             file.write(word + "\n")
-    await message.reply_document("wordlist.txt")
-
+    await client.send_document(message.chat.id, "wordlist.txt")
 
 @app.on_message(filters.text)
-def handle_incoming_message(client, message):
+async def handle_incoming_message(client, message):
     puzzle_text = message.text
     if re.search(trigger_pattern, puzzle_text):
         starting_letter_match = re.search(starting_letter_pattern, puzzle_text)
@@ -84,7 +92,7 @@ def handle_incoming_message(client, message):
 
             if valid_words:
                 # Randomly choose 5 words
-                selected_words = random.sample(valid_words, min(1, len(valid_words)))
+                selected_words = random.sample(valid_words, min(5, len(valid_words)))
                 
                 # Add selected words to the set of used words
                 used_words.update(selected_words)
@@ -92,11 +100,11 @@ def handle_incoming_message(client, message):
                 response_message = "Words:\n"
                 for word in selected_words:
                     response_message += f"\n- {word}\nCopy-String: {word}\n"
-                client.send_message(message.chat.id, response_message)
+                await client.send_message(message.chat.id, response_message)
             else:
-                client.send_message(message.chat.id, "No valid words found for the given criteria.")
+                await client.send_message(message.chat.id, "No valid words found for the given criteria.")
         else:
-            client.send_message(message.chat.id, "Criteria not found in the puzzle text.")
+            await client.send_message(message.chat.id, "Criteria not found in the puzzle text.")
     return
 
 def run():
@@ -106,4 +114,3 @@ if __name__ == "__main__":
     t = Thread(target=run)
     t.start()
     app.run()
-        
