@@ -52,9 +52,13 @@ def fetch_words():
     response = requests.get(alpha_url)
     words_alpha = set(response.text.splitlines())
     
+    # Exclude words containing hyphens and commas
+    words_alpha_filtered = {word for word in words_alpha if "-" not in word and "," not in word}
+    
     # Combine all sets of words
-    combined_words = nltk_words | external_words | words_alpha
+    combined_words = nltk_words | external_words | words_alpha_filtered
     return combined_words
+
 
 def get_combined_word_list():
     return fetch_words()
