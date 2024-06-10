@@ -1,4 +1,4 @@
-pympngo
+pymongo
 pymongo[srv]
 requests
 pyperclip
