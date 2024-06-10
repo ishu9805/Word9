@@ -56,6 +56,16 @@ async def reset_used_words(client, message):
     used_words.clear()
     await client.send_message("Used words list has been reset.")
 
+
+@app.on_message(filters.command("generatewordlist"))
+async def generate_wordlist(client, message):
+    combined_words = get_combined_word_list()
+    with open("wordlist.txt", "w") as file:
+        for word in combined_words:
+            file.write(word + "\n")
+    await message.reply_document("wordlist.txt")
+
+
 @app.on_message(filters.text)
 def handle_incoming_message(client, message):
     puzzle_text = message.text
