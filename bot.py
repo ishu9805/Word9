@@ -6,6 +6,7 @@ import os
 import requests
 from threading import Thread
 from flask import Flask
+from pymongo import MongoClient
 
 # Download the nltk words dataset
 nltk.download("words")
@@ -14,12 +15,18 @@ nltk.download("words")
 API_ID = os.environ.get("API_ID")
 API_HASH = os.environ.get("API_HASH")
 TOKEN = os.environ.get("BOT_TOKEN")
+MONGO_URI = os.environ.get("MONGO_URI")
 
 # Initialize the Pyrogram client
 app = Client("word9", api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
 
 # Initialize the Flask server
 server = Flask(__name__)
+
+# MongoDB client
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client["word_database"]
+word_collection = db["words"]
 
 @server.route("/")
 def home():
@@ -29,6 +36,7 @@ def home():
 starting_letter_pattern = r"start with ([A-Z])"
 min_length_pattern = r"include at least (\d+) letters"
 trigger_pattern = r"Turn: .*"  # Replace "Turn: .*" with your specific trigger pattern
+accepted_pattern = r"(\w+) is accepted"
 
 # Set to keep track of used words
 used_words = set()
@@ -61,7 +69,8 @@ def fetch_words():
     return combined_words
 
 def get_combined_word_list():
-    return fetch_words()
+    words = word_collection.find()
+    return {word["word"] for word in words}
 
 @app.on_message(filters.command("ping"))
 async def ping(client, message):
@@ -84,6 +93,19 @@ async def generate_wordlist(client, message):
 @app.on_message(filters.text)
 async def handle_incoming_message(client, message):
     puzzle_text = message.text
+    
+    # Check if the message matches the accepted pattern
+    accepted_match = re.search(accepted_pattern, puzzle_text)
+    if accepted_match:
+        accepted_word = accepted_match.group(1).lower()
+        if not word_collection.find_one({"word": accepted_word}):
+            word_collection.update_one({"word": accepted_word}, {"$set": {"word": accepted_word}}, upsert=True)
+            await message.reply_text(f"The word '{accepted_word}' has been added to the database.")
+        else:
+            await message.reply_text(f"The word '{accepted_word}' is already in the database.")
+        return
+    
+    # Proceed with normal word generation if the message matches the trigger pattern
     if re.search(trigger_pattern, puzzle_text):
         starting_letter_match = re.search(starting_letter_pattern, puzzle_text)
         min_length_match = re.search(min_length_pattern, puzzle_text)
@@ -99,7 +121,7 @@ async def handle_incoming_message(client, message):
 
             if valid_words:
                 # Randomly choose 5 words
-                selected_words = random.sample(valid_words, min(5, len(valid_words)))
+                selected_words = random.sample(valid_words, min(1, len(valid_words)))
                 
                 # Add selected words to the set of used words
                 used_words.update(selected_words)
