@@ -117,75 +117,6 @@ async def exist_word(client, message):
     else:
         await message.reply_text(f"The word '{word}' does not exist in the database.")
 
-@app.on_message(filters.command("checkwords"))
-async def check_words(client, message):
-    global stop_check
-    stop_check = False
-
-    # Get the last processed word from the command argument
-    last_word = message.command[1].strip().lower()
-
-    # Set chat IDs
-    wordchainbot_chat_id = 'on9wordchainbot'  # Replace with actual chat ID or username
-
-    await client.send_message(TARGET_GROUP_ID, "Starting word existence check...")
-
-    # Get all English words from NLTK corpus and convert to lowercase
-    english_words = sorted(word.lower() for word in fetch_words())
-
-    # Find the starting index based on the last word provided
-    start_index = 0
-    if last_word:
-        try:
-            start_index = english_words.index(last_word) + 1
-        except ValueError:
-            await client.send_message(TARGET_GROUP_ID, f"Word '{last_word}' not found in the word list. Starting from the beginning.")
-            start_index = 0
-
-    async def event_handler(event_response):
-        if event_response.chat.id == (await client.get_peer_id(wordchainbot_chat_id)):
-            if "is in my dictionary" in event_response.text:
-                word = event_response.text.split()[0].lower()
-                if not word_collection.find_one({"word": word}):
-                    word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
-                    await client.send_message(TARGET_GROUP_ID, f"The word '{word}' has been added to the database.")
-                else:
-                    await client.send_message(TARGET_GROUP_ID, f"The word '{word}' is already in the database.")
-
-    # Add the event handler for new messages
-    client.add_handler(event_handler, filters.new_message)
-
-    try:
-        word_count = 0
-        for index in range(start_index, len(english_words)):
-            if stop_check:
-                await client.send_message(TARGET_GROUP_ID, "Word existence check stopped.")
-                break
-
-            word = english_words[index]
-            # Construct the command
-            command = f"/exist {word}"
-            
-            # Send command to the on9wordchainbot
-            await client.send_message(wordchainbot_chat_id, command)
-            
-            # Add a delay to avoid rate limits
-            await asyncio.sleep(2)  # Increased delay between each message
-
-            word_count += 1
-            if word_count >= 30:
-                await asyncio.sleep(60)  # Wait for 1 minute after every 30 words
-                word_count = 0
-    
-    except Exception as e:
-        await client.send_message(TARGET_GROUP_ID, f"An error occurred: {e}")
-    
-    finally:
-        # Remove the event handler after processing
-        client.remove_handler(event_handler, filters.new_message)
-
-    if not stop_check:
-        await client.send_message(TARGET_GROUP_ID, "Word existence check completed.")
 
 @app.on_message(filters.command("stopwords"))
 async def stop_words(client, message):
@@ -197,7 +128,79 @@ async def stop_words(client, message):
 async def handle_incoming_message(client, message):
     puzzle_text = message.text
     
-    # Check if the message matches the accepted pattern
+@app.on_message(filters.command("checkwords"))
+async def check_words(client, message):
+    global stop_check
+    stop_check = False
+
+    # Get the last processed word from the command argument
+    if len(message.command) > 1:
+        last_word = message.command[1].strip().lower()
+    else:
+        last_word = None
+
+    # Set chat ID for the target group
+    target_group_id = -1002048925723
+
+    await client.send_message(target_group_id, "Starting word existence check...")
+
+    # Get all English words from NLTK corpus and convert to lowercase
+    english_words = sorted(word.lower() for word in fetch_words())
+
+    # Find the starting index based on the last word provided
+    start_index = 0
+    if last_word:
+        try:
+            start_index = english_words.index(last_word) + 1
+        except ValueError:
+            await client.send_message(target_group_id, f"Word '{last_word}' not found in the word list. Starting from the beginning.")
+            start_index = 0
+
+    async def event_handler(event_response):
+        if event_response.chat.id == target_group_id:
+            if "is in my dictionary" in event_response.text:
+                word = event_response.text.split()[0].lower()
+                if not word_collection.find_one({"word": word}):
+                    word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
+                    await client.send_message(target_group_id, f"The word '{word}' has been added to the database.")
+                else:
+                    await client.send_message(target_group_id, f"The word '{word}' is already in the database.")
+
+    # Add the event handler for new messages
+    app.add_handler(filters.new_message & filters.incoming & filters.chat(target_group_id), event_handler)
+
+    try:
+        word_count = 0
+        for index in range(start_index, len(english_words)):
+            if stop_check:
+                await client.send_message(target_group_id, "Word existence check stopped.")
+                break
+
+            word = english_words[index]
+            # Construct the command
+            command = f"/exist {word}"
+            
+            # Send command to the target group
+            await client.send_message(target_group_id, command)
+            
+            # Add a delay to avoid rate limits
+            await asyncio.sleep(2)  # Increased delay between each message
+
+            word_count += 1
+            if word_count >= 30:
+                await asyncio.sleep(60)  # Wait for 1 minute after every 30 words
+                word_count = 0
+    
+    except Exception as e:
+        await client.send_message(target_group_id, f"An error occurred: {e}")
+    
+    finally:
+        # Remove the event handler after processing
+        app.remove_handler(event_handler, filters.new_message & filters.incoming & filters.chat(target_group_id))
+
+    if not stop_check:
+        await client.send_message(target_group_id, "Word existence check completed.")
+the accepted pattern
     accepted_match = re.search(accepted_pattern, puzzle_text)
     if accepted_match:
         accepted_word = accepted_match.group(1).lower()
