@@ -200,7 +200,10 @@ async def check_words(client, message):
 
     if not stop_check:
         await client.send_message(target_group_id, "Word existence check completed.")
-the accepted pattern
+
+@app.on_message(filters.text)
+async def handle_incoming_message(client, message):
+    puzzle_text = message.text
     accepted_match = re.search(accepted_pattern, puzzle_text)
     if accepted_match:
         accepted_word = accepted_match.group(1).lower()
