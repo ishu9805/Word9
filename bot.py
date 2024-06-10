@@ -106,12 +106,12 @@ async def handle_incoming_message(client, message):
     accepted_match = re.search(accepted_pattern, puzzle_text)
     if accepted_match:
         accepted_word = accepted_match.group(1).lower()
-        combined_words = get_combined_word_list()
-        if accepted_word not in combined_words:
+        word_exists = word_collection.find_one({"word": accepted_word})
+        if word_exists:
+            await message.reply_text(f"The word '{accepted_word}' is already in the database.")
+        else:
             word_collection.update_one({"word": accepted_word}, {"$set": {"word": accepted_word}}, upsert=True)
             await message.reply_text(f"The word '{accepted_word}' has been added to the database.")
-        else:
-            await message.reply_text(f"The word '{accepted_word}' is already in the database or word list.")
         return
     
     # Proceed with normal word generation if the message matches the trigger pattern
@@ -138,12 +138,21 @@ async def handle_incoming_message(client, message):
                 response_message = "Words:\n"
                 for word in selected_words:
                     response_message += f"\n- {word}\nCopy-String: {word}\n"
+                    # Check if the word already exists in MongoDB
+                    word_exists = word_collection.find_one({"word": word})
+                    if word_exists:
+                        response_message += f"The word '{word}' is already in the database.\n"
+                    else:
+                        # Add each selected word to MongoDB
+                        word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
+                        response_message += f"The word '{word}' has been added to the database.\n"
                 await client.send_message(message.chat.id, response_message)
             else:
                 await client.send_message(message.chat.id, "No valid words found for the given criteria.")
         else:
             await client.send_message(message.chat.id, "Criteria not found in the puzzle text.")
     return
+
 
 def run():
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
