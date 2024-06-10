@@ -69,8 +69,11 @@ def fetch_words():
     return combined_words
 
 def get_combined_word_list():
-    words = word_collection.find()
-    return {word["word"] for word in words}
+    # Fetch combined words from all sources
+    combined_words = fetch_words()
+    # Add words from MongoDB
+    mongodb_words = {word["word"] for word in word_collection.find()}
+    return combined_words | mongodb_words
 
 @app.on_message(filters.command("ping"))
 async def ping(client, message):
@@ -90,6 +93,11 @@ async def generate_wordlist(client, message):
             file.write(word + "\n")
     await client.send_document(message.chat.id, "wordlist.txt")
 
+@app.on_message(filters.command("clearwords"))
+async def clear_words(client, message):
+    word_collection.delete_many({})
+    await message.reply_text("All words have been removed from the database.")
+
 @app.on_message(filters.text)
 async def handle_incoming_message(client, message):
     puzzle_text = message.text
@@ -98,11 +106,12 @@ async def handle_incoming_message(client, message):
     accepted_match = re.search(accepted_pattern, puzzle_text)
     if accepted_match:
         accepted_word = accepted_match.group(1).lower()
-        if not word_collection.find_one({"word": accepted_word}):
+        combined_words = get_combined_word_list()
+        if accepted_word not in combined_words:
             word_collection.update_one({"word": accepted_word}, {"$set": {"word": accepted_word}}, upsert=True)
             await message.reply_text(f"The word '{accepted_word}' has been added to the database.")
         else:
-            await message.reply_text(f"The word '{accepted_word}' is already in the database.")
+            await message.reply_text(f"The word '{accepted_word}' is already in the database or word list.")
         return
     
     # Proceed with normal word generation if the message matches the trigger pattern
@@ -121,7 +130,7 @@ async def handle_incoming_message(client, message):
 
             if valid_words:
                 # Randomly choose 5 words
-                selected_words = random.sample(valid_words, min(1, len(valid_words)))
+                selected_words = random.sample(valid_words, min(5, len(valid_words)))
                 
                 # Add selected words to the set of used words
                 used_words.update(selected_words)
@@ -143,4 +152,3 @@ if __name__ == "__main__":
     t = Thread(target=run)
     t.start()
     app.run()
-    
