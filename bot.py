@@ -1,15 +1,9 @@
 from pyrogram import Client, filters
 import re
-import nltk
-import random
 import os
-import requests
 from threading import Thread
 from flask import Flask
 from pymongo import MongoClient
-
-# Download the nltk words dataset
-nltk.download("words")
 
 # Retrieve API credentials from environment variables
 API_ID = os.environ.get("API_ID")
@@ -39,27 +33,6 @@ trigger_pattern = r"Turn: .*"  # Replace "Turn: .*" with your specific trigger p
 
 # Set to keep track of used words
 used_words = set()
-
-def fetch_and_store_words():
-    # Fetch words from NLTK
-    nltk_words = set(nltk.corpus.words.words())
-    
-    # Fetch words from the external URLs
-    urls = [
-        "https://raw.githubusercontent.com/dwyl/english-words/master/words.txt",
-        "https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english.txt"
-    ]
-    external_words = set()
-    for url in urls:
-        response = requests.get(url)
-        external_words.update(response.text.splitlines())
-    
-    # Combine both sets of words
-    combined_words = nltk_words | external_words
-    
-    # Store words in MongoDB
-    for word in combined_words:
-        word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
 
 def get_combined_word_list():
     words = word_collection.find()
@@ -131,9 +104,7 @@ def run():
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
 
 if __name__ == "__main__":
-    # Fetch and store words in MongoDB
-    fetch_and_store_words()
-    
     t = Thread(target=run)
     t.start()
     app.run()
+                                                             
