@@ -6,7 +6,6 @@ import os
 import requests
 from threading import Thread
 from flask import Flask
-from pymongo import MongoClient
 
 # Download the nltk words dataset
 nltk.download("words")
@@ -15,18 +14,12 @@ nltk.download("words")
 API_ID = os.environ.get("API_ID")
 API_HASH = os.environ.get("API_HASH")
 TOKEN = os.environ.get("BOT_TOKEN")
-MONGO_URI = os.environ.get("MONGO_URI")
 
 # Initialize the Pyrogram client
 app = Client("word9", api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
 
 # Initialize the Flask server
 server = Flask(__name__)
-
-# MongoDB client
-mongo_client = MongoClient(MONGO_URI)
-db = mongo_client["word_database"]
-word_collection = db["words"]
 
 @server.route("/")
 def home():
@@ -40,7 +33,7 @@ trigger_pattern = r"Turn: .*"  # Replace "Turn: .*" with your specific trigger p
 # Set to keep track of used words
 used_words = set()
 
-def fetch_and_store_words():
+def fetch_words():
     # Fetch words from NLTK
     nltk_words = set(nltk.corpus.words.words())
     
@@ -54,45 +47,21 @@ def fetch_and_store_words():
         response = requests.get(url)
         external_words.update(response.text.splitlines())
     
-    # Combine both sets of words
-    combined_words = nltk_words | external_words
+    # Fetch words from words_alpha.txt in the repository
+    alpha_url = "https://raw.githubusercontent.com/ishu9805/Word9/main/words_alpha.txt"
+    response = requests.get(alpha_url)
+    words_alpha = set(response.text.splitlines())
     
-    # Store words in MongoDB
-    for word in combined_words:
-        word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
+    # Combine all sets of words
+    combined_words = nltk_words | external_words | words_alpha
+    return combined_words
 
 def get_combined_word_list():
-    words = word_collection.find()
-    return {word["word"] for word in words}
+    return fetch_words()
 
 @app.on_message(filters.command("ping"))
 async def ping(client, message):
     await message.reply_text("pong!")
-
-@app.on_message(filters.command("resetwords"))
-async def reset_used_words(client, message):
-    global used_words
-    used_words.clear()
-    await message.reply_text("Used words list has been reset.")
-
-@app.on_message(filters.command("generatewordlist"))
-async def generate_wordlist(client, message):
-    combined_words = get_combined_word_list()
-    with open("wordlist.txt", "w") as file:
-        for word in combined_words:
-            file.write(word + "\n")
-    await client.send_document(message.chat.id, "wordlist.txt")
-
-@app.on_message(filters.command("addwords"))
-async def add_words(client, message):
-    # Split the message text to extract words
-    words_to_add = message.text.split()[1:]  # Skip the command itself
-    
-    # Add each word to the MongoDB collection
-    for word in words_to_add:
-        word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
-    
-    await message.reply_text(f"Added {len(words_to_add)} words to the database.")
 
 @app.on_message(filters.text)
 async def handle_incoming_message(client, message):
@@ -131,9 +100,7 @@ def run():
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
 
 if __name__ == "__main__":
-    # Fetch and store words in MongoDB
-    fetch_and_store_words()
-    
     t = Thread(target=run)
     t.start()
     app.run()
+    
