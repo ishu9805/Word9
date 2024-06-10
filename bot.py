@@ -108,7 +108,7 @@ async def handle_incoming_message(client, message):
         accepted_word = accepted_match.group(1).lower()
         word_exists = word_collection.find_one({"word": accepted_word})
         if word_exists:
-            await message.reply_text(f"The word '{accepted_word}' is already in the database.")
+            await message.reply_text(f"👍👍👍")
         else:
             word_collection.update_one({"word": accepted_word}, {"$set": {"word": accepted_word}}, upsert=True)
             await message.reply_text(f"The word '{accepted_word}' has been added to the database.")
