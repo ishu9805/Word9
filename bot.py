@@ -45,7 +45,9 @@ def get_combined_word_list():
         # Fetch words from the external URL
         urls = [
             "https://raw.githubusercontent.com/dwyl/english-words/master/words.txt",
-            "https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english.txt"
+            "https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english.txt",
+            "https://github.com/openethereum/wordlist/blob/master/res/wordlist.txt",
+            "https://github.com/purcell/wordchainsrevenge/blob/master/wordlist.txt"
         ]
         external_words = set()
         for url in urls:
