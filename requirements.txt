@@ -1,3 +1,5 @@
+pympngo
+pymongo[srv]
 requests
 pyperclip
 pyrogram
