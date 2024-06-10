@@ -78,6 +78,14 @@ def get_combined_word_list():
 async def ping(client, message):
     await message.reply_text("pong!")
 
+
+@app.on_message(filters.command("countwords"))
+async def count_words_command(client, message):
+    word_count = word_collection.count_documents({})
+    await message.reply_text(f"The MongoDB database contains {word_count} words.")
+
+
+
 @app.on_message(filters.command("resetwords"))
 async def reset_used_words(client, message):
     global used_words
