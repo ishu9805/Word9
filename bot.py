@@ -117,7 +117,7 @@ async def exist_word(client, message):
     else:
         await message.reply_text(f"The word '{word}' does not exist in the database.")
 
-@app.on_message(filters.command("checkwords ?(.*)"))
+@app.on_message(filters.command("checkwords"))
 async def check_words(client, message):
     global stop_check
     stop_check = False
