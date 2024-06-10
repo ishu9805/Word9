@@ -1,10 +1,15 @@
-import random
 from pyrogram import Client, filters
 import re
+import nltk
+import random
 import os
+import requests
 from threading import Thread
 from flask import Flask
 from pymongo import MongoClient
+
+# Download the nltk words dataset
+nltk.download("words")
 
 # Retrieve API credentials from environment variables
 API_ID = os.environ.get("API_ID")
@@ -35,6 +40,27 @@ trigger_pattern = r"Turn: .*"  # Replace "Turn: .*" with your specific trigger p
 # Set to keep track of used words
 used_words = set()
 
+def fetch_and_store_words():
+    # Fetch words from NLTK
+    nltk_words = set(nltk.corpus.words.words())
+    
+    # Fetch words from the external URLs
+    urls = [
+        "https://raw.githubusercontent.com/dwyl/english-words/master/words.txt",
+        "https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english.txt"
+    ]
+    external_words = set()
+    for url in urls:
+        response = requests.get(url)
+        external_words.update(response.text.splitlines())
+    
+    # Combine both sets of words
+    combined_words = nltk_words | external_words
+    
+    # Store words in MongoDB
+    for word in combined_words:
+        word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
+
 def get_combined_word_list():
     words = word_collection.find()
     return {word["word"] for word in words}
@@ -59,28 +85,7 @@ async def generate_wordlist(client, message):
 
 @app.on_message(filters.command("addwords"))
 async def add_words(client, message):
-    # Check if the message contains a document
-    if message.document:
-        document_name = message.document.file_name
-        if document_name == "wordlist.txt":
-            # Download the document
-            document = await message.download()
-            
-            # Read words from the text file
-            with open(document, 'r') as file:
-                words_to_add = file.read().splitlines()
-            
-            # Add each word to the MongoDB collection
-            for word in words_to_add:
-                word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
-            
-            await message.reply_text(f"Added {len(words_to_add)} words from the text file to the database.")
-            
-            # Remove the downloaded document
-            os.remove(document)
-            return
-    
-    # If no document or incorrect document name, proceed with extracting words from the message text
+    # Split the message text to extract words
     words_to_add = message.text.split()[1:]  # Skip the command itself
     
     # Add each word to the MongoDB collection
@@ -88,7 +93,6 @@ async def add_words(client, message):
         word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
     
     await message.reply_text(f"Added {len(words_to_add)} words to the database.")
-            
 
 @app.on_message(filters.text)
 async def handle_incoming_message(client, message):
@@ -127,7 +131,9 @@ def run():
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
 
 if __name__ == "__main__":
+    # Fetch and store words in MongoDB
+    fetch_and_store_words()
+    
     t = Thread(target=run)
     t.start()
     app.run()
-                                                             
