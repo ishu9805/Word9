@@ -103,7 +103,7 @@ async def clear_words(client, message):
 
 @app.on_message(filters.command("existwords", prefixes=["/", "!", "."]))
 async def exist_words(client, message):
-    nltk_words = fetch_words()
+    nltk_words = sorted(nltk.corpus.words.words())
     
     batch_size = 50  # Number of words per message
     for i in range(0, len(nltk_words), batch_size):
