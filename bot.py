@@ -6,6 +6,7 @@ import requests
 from threading import Thread
 from flask import Flask
 from pymongo import MongoClient
+import random
 
 # Download the nltk words dataset
 nltk.download("words")
@@ -56,7 +57,7 @@ def fetch_words():
         external_words.update(response.text.splitlines())
     
     # Fetch words from words_alpha.txt in the repository
-    alpha_url = "https://raw.githubusercontent.com/ishu9805/Word9/main/words_alpha.txt"
+    alpha_url = "https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt"
     response = requests.get(alpha_url)
     words_alpha = set(response.text.splitlines())
     
@@ -69,9 +70,15 @@ def fetch_words():
     return combined_words
 
 def get_combined_word_list():
-    # Fetch words from MongoDB only
+    # Fetch words from MongoDB
     mongodb_words = {word["word"] for word in word_collection.find()}
-    return mongodb_words
+    
+    # Fetch words from NLTK and external sources
+    nltk_and_external_words = fetch_words()
+    
+    # Combine all words
+    combined_words = mongodb_words | nltk_and_external_words
+    return combined_words
 
 @app.on_message(filters.command("ping", prefixes=["/", "!", "."]))
 async def ping(client, message):
@@ -145,7 +152,7 @@ async def handle_incoming_message(client, message):
         min_length_match = re.search(min_length_pattern, puzzle_text)
 
         if starting_letter_match and min_length_match:
-            starting_letter = starting_letter_match.group(1)
+            starting_letter = starting_letter_match.group(1).lower()
             min_length = int(min_length_match.group(1))
 
             combined_words = get_combined_word_list()
@@ -185,4 +192,3 @@ if __name__ == "__main__":
     t = Thread(target=run)
     t.start()
     app.run()
-    
