@@ -61,9 +61,9 @@ def fetch_words():
     response = requests.get(alpha_url)
     words_alpha = set(response.text.splitlines())
     
-    # Exclude words containing special characters
+    # Include words containing only alphabetic characters
     pattern = re.compile(r"^[a-zA-Z]+$")
-    words_alpha_filtered = {word for word in words_alpha if pattern.match(word)}
+    words_alpha_filtered = {word.replace("'", "") for word in words_alpha if pattern.match(word.replace("'", ""))}
     
     # Combine all sets of words
     combined_words = nltk_words | external_words | words_alpha_filtered
