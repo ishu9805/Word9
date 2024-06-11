@@ -1,7 +1,6 @@
 from pyrogram import Client, filters
 import re
 import nltk
-import random
 import os
 import requests
 from threading import Thread
@@ -74,22 +73,22 @@ def get_combined_word_list():
     mongodb_words = {word["word"] for word in word_collection.find()}
     return mongodb_words
 
-@app.on_message(filters.command("ping"))
+@app.on_message(filters.command("ping", prefixes=["/", "!", "."]))
 async def ping(client, message):
     await message.reply_text("pong!")
 
-@app.on_message(filters.command("countwords"))
+@app.on_message(filters.command("countwords", prefixes=["/", "!", "."]))
 async def count_words_command(client, message):
     word_count = word_collection.count_documents({})
     await message.reply_text(f"The MongoDB database contains {word_count} words.")
 
-@app.on_message(filters.command("resetwords"))
+@app.on_message(filters.command("resetwords", prefixes=["/", "!", "."]))
 async def reset_used_words(client, message):
     global used_words
     used_words.clear()
     await message.reply_text("Used words list has been reset.")
 
-@app.on_message(filters.command("generatewordlist"))
+@app.on_message(filters.command("generatewordlist", prefixes=["/", "!", "."]))
 async def generate_wordlist(client, message):
     combined_words = get_combined_word_list()
     with open("wordlist.txt", "w") as file:
@@ -97,16 +96,20 @@ async def generate_wordlist(client, message):
             file.write(word + "\n")
     await client.send_document(message.chat.id, "wordlist.txt")
 
-@app.on_message(filters.command("clearwords"))
+@app.on_message(filters.command("clearwords", prefixes=["/", "!", "."]))
 async def clear_words(client, message):
     word_collection.delete_many({})
     await message.reply_text("All words have been removed from the database.")
 
-@app.on_message(filters.command("existwords"))
+@app.on_message(filters.command("existwords", prefixes=["/", "!", "."]))
 async def exist_words(client, message):
-    nltk_words = set(nltk.corpus.words.words())
-    random_word = random.choice(list(nltk_words))
-    await message.reply_text(f"/exist {random_word}")
+    nltk_words = fetch_words()
+    
+    batch_size = 50  # Number of words per message
+    for i in range(0, len(nltk_words), batch_size):
+        batch = nltk_words[i:i + batch_size]
+        response_message = "\n".join(f"/exist {word}" for word in batch)
+        await message.reply_text(response_message)
 
 @app.on_message(filters.text)
 async def handle_incoming_message(client, message):
@@ -130,7 +133,7 @@ async def handle_incoming_message(client, message):
         word_to_check = dictionary_response_match.group(1).lower()
         word_exists = word_collection.find_one({"word": word_to_check})
         if word_exists:
-            await message.reply_text(f"'🤭🤭🤭.")
+            await message.reply_text(f"'{word_to_check}' is already in the database.")
         else:
             word_collection.update_one({"word": word_to_check}, {"$set": {"word": word_to_check}}, upsert=True)
             await message.reply_text(f"The word '{word_to_check}' has been added to the database.")
@@ -182,3 +185,4 @@ if __name__ == "__main__":
     t = Thread(target=run)
     t.start()
     app.run()
+    
