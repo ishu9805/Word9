@@ -170,14 +170,7 @@ async def handle_incoming_message(client, message):
                 response_message = "Words:\n"
                 for word in selected_words:
                     response_message += f"\n- {word}\nCopy-String: {word}\n"
-                    # Check if the word already exists in MongoDB
-                    word_exists = word_collection.find_one({"word": word})
-                    if word_exists:
-                        response_message += f"The word '{word}' is already in the database.\n"
-                    else:
-                        # Add each selected word to MongoDB
-                        word_collection.update_one({"word": word}, {"$set": {"word": word}}, upsert=True)
-                        response_message += f"The word '{word}' has been added to the database.\n"
+    
                 await client.send_message(message.chat.id, response_message)
             else:
                 await client.send_message(message.chat.id, "No valid words found for the given criteria.")
