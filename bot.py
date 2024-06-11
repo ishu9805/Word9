@@ -105,7 +105,7 @@ async def clear_words(client, message):
 async def exist_words(client, message):
     nltk_words = sorted(nltk.corpus.words.words())
     
-    batch_size = 50  # Number of words per message
+    batch_size = 20 # Number of words per message
     for i in range(0, len(nltk_words), batch_size):
         batch = nltk_words[i:i + batch_size]
         response_message = "\n".join(f"/exist {word}" for word in batch)
