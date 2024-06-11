@@ -33,7 +33,7 @@ def home():
     return "Bot is running"
 
 # Define regex patterns
-starting_letter_pattern = r"start with ([A-Z])"
+starting_letter_pattern = r"start with __([A-Z])__"
 min_length_pattern = r"include at least (\d+) letters"
 trigger_pattern = r"Turn: .*"  # Replace "Turn: .*" with your specific trigger pattern
 accepted_pattern = r"(\w+) is accepted"
