@@ -37,6 +37,7 @@ starting_letter_pattern = r"start with ([A-Z])"
 min_length_pattern = r"include at least (\d+) letters"
 trigger_pattern = r"Turn: .*"  # Replace "Turn: .*" with your specific trigger pattern
 accepted_pattern = r"(\w+) is accepted"
+dictionary_response_pattern = r"(\w+) is in my dictionary"
 
 # Set to keep track of used words
 used_words = set()
@@ -73,18 +74,14 @@ def get_combined_word_list():
     mongodb_words = {word["word"] for word in word_collection.find()}
     return mongodb_words
 
-
 @app.on_message(filters.command("ping"))
 async def ping(client, message):
     await message.reply_text("pong!")
-
 
 @app.on_message(filters.command("countwords"))
 async def count_words_command(client, message):
     word_count = word_collection.count_documents({})
     await message.reply_text(f"The MongoDB database contains {word_count} words.")
-
-
 
 @app.on_message(filters.command("resetwords"))
 async def reset_used_words(client, message):
@@ -105,10 +102,16 @@ async def clear_words(client, message):
     word_collection.delete_many({})
     await message.reply_text("All words have been removed from the database.")
 
+@app.on_message(filters.command("existwords"))
+async def exist_words(client, message):
+    nltk_words = set(nltk.corpus.words.words())
+    random_word = random.choice(list(nltk_words))
+    await message.reply_text(f"/exist {random_word}")
+
 @app.on_message(filters.text)
 async def handle_incoming_message(client, message):
     puzzle_text = message.text
-    
+
     # Check if the message matches the accepted pattern
     accepted_match = re.search(accepted_pattern, puzzle_text)
     if accepted_match:
@@ -120,7 +123,19 @@ async def handle_incoming_message(client, message):
             word_collection.update_one({"word": accepted_word}, {"$set": {"word": accepted_word}}, upsert=True)
             await message.reply_text(f"The word '{accepted_word}' has been added to the database.")
         return
-    
+
+    # Check for the dictionary response pattern
+    dictionary_response_match = re.search(dictionary_response_pattern, puzzle_text)
+    if dictionary_response_match:
+        word_to_check = dictionary_response_match.group(1).lower()
+        word_exists = word_collection.find_one({"word": word_to_check})
+        if word_exists:
+            await message.reply_text(f"'🤭🤭🤭.")
+        else:
+            word_collection.update_one({"word": word_to_check}, {"$set": {"word": word_to_check}}, upsert=True)
+            await message.reply_text(f"The word '{word_to_check}' has been added to the database.")
+        return
+
     # Proceed with normal word generation if the message matches the trigger pattern
     if re.search(trigger_pattern, puzzle_text):
         starting_letter_match = re.search(starting_letter_pattern, puzzle_text)
@@ -136,7 +151,7 @@ async def handle_incoming_message(client, message):
             valid_words = [word for word in combined_words if word.startswith(starting_letter) and len(word) >= min_length and word not in used_words]
 
             if valid_words:
-                # Randomly choose 1 words
+                # Randomly choose 1 word
                 selected_words = random.sample(valid_words, min(1, len(valid_words)))
                 
                 # Add selected words to the set of used words
@@ -159,7 +174,6 @@ async def handle_incoming_message(client, message):
         else:
             await client.send_message(message.chat.id, "Criteria not found in the puzzle text.")
     return
-
 
 def run():
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
