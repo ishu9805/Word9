@@ -61,9 +61,9 @@ def fetch_words():
     response = requests.get(alpha_url)
     words_alpha = set(response.text.splitlines())
     
-    # Include words containing only alphabetic characters (no apostrophes or hyphens)
+    # Include words containing only alphabetic characters (no apostrophes, hyphens, or commas)
     pattern = re.compile(r"^[a-zA-Z]+$")
-    words_alpha_filtered = {word.replace("'", "").replace("-", "") for word in words_alpha if pattern.match(word.replace("'", "").replace("-", ""))}
+    words_alpha_filtered = {re.sub(r"[-',]", "", word) for word in words_alpha if pattern.match(re.sub(r"[-',]", "", word))}
     
     # Combine all sets of words
     combined_words = nltk_words | external_words | words_alpha_filtered
@@ -99,9 +99,15 @@ async def reset_used_words(client, message):
 @app.on_message(filters.command("generatewordlist", prefixes=["/", "!", "."]))
 async def generate_wordlist(client, message):
     combined_words = get_combined_word_list()
+    
+    # Filter out words containing hyphens, apostrophes, commas, or numbers
+    pattern = re.compile(r"^[a-zA-Z]+$")
+    filtered_words = {word for word in combined_words if pattern.match(word)}
+    
     with open("wordlist.txt", "w") as file:
-        for word in combined_words:
+        for word in filtered_words:
             file.write(word + "\n")
+    
     await client.send_document(message.chat.id, "wordlist.txt")
 
 @app.on_message(filters.command("clearwords", prefixes=["/", "!", "."]))
@@ -125,8 +131,8 @@ async def handle_incoming_message(client, message):
 
     # Check if the message matches the accepted pattern
     accepted_match = re.search(accepted_pattern, puzzle_text)
-    if accepted_match:
-        accepted_word = accepted_match.group(1).lower()
+    if (accepted_match):
+        accepted_word = re.sub(r"[-',]", "", accepted_match.group(1).lower())
         word_exists = word_collection.find_one({"word": accepted_word})
         if word_exists:
             await message.reply_text(f"👍👍👍")
@@ -138,7 +144,7 @@ async def handle_incoming_message(client, message):
     # Check for the dictionary response pattern
     dictionary_response_match = re.search(dictionary_response_pattern, puzzle_text)
     if dictionary_response_match:
-        word_to_check = dictionary_response_match.group(1).lower()
+        word_to_check = re.sub(r"[-',]", "", dictionary_response_match.group(1).lower())
         word_exists = word_collection.find_one({"word": word_to_check})
         if word_exists:
             await message.reply_text(f"'{word_to_check}' is already in the database.")
