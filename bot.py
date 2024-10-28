@@ -1,19 +1,11 @@
-from pyrogram import Client, filters
+from pyrogram import Client
+from pymongo import MongoClient
 import re
-import nltk
-import random
-import os
-from threading import Thread
-from flask import Flask
 
-# nltk
-nltk.download("words")
+API_ID = 20904372
+API_HASH = "3029454a7c4e0cc538818a3bf7a58336"
+SESSION = "BQFbytYAh_udAGoo_IrHZUKKy48suxGDmi3srfe59QfzcFzv2F3wr2XJfXV8U6dQlHZs3AsSBWt-YzDbjqeXJs5Z16CVaWv-kbR-O377cUJJEVJeutmVqZu4SeqzbB3iwnY-GLWKiLRMp02GtweYiKIlql3JXICUl2w44QVHJrg2nKhHdW_tG-fFJA2XFX-myRS_J7ZipG3HjduLQ7EcOGzyz0ZIwZck8ciVVqHb3-yUipt7ZTIDd3JNJvmsULdPbx3ff923DWLObOLUKTcntTQ7vNIoxfzz73D45AXG49wV_ljuefIYIK1NR1ySm7_moZcNZJxcuZvjUCT8x2UcNbTVD9nKigAAAAG3yp56AA"
 
-API_ID = os.environ.get("API_ID") 
-API_HASH = os.environ.get("API_HASH") 
-SESSION = os.environ.get("SESSION")
-
-# Bot
 app = Client(
     "word9",
     api_id=API_ID,
@@ -21,53 +13,38 @@ app = Client(
     session_string=SESSION
 )
 
-server = Flask(__name__)
+MONGO_URI = "mongodb+srv://naruto:hinatababy@cluster0.rqyiyzx.mongodb.net/"
+client = MongoClient(MONGO_URI)
+db = client['image_search_db']
+images_collection = db['images']
 
-@server.route("/")
-def home():
-    return "Bot is running"
+TARGET_USER_ID = 6942284208
 
-starting_letter_pattern = r"start with ([A-Z])"
-min_length_pattern = r"include at least (\d+) letters"
-trigger_pattern = r"Turn: ᖇᗩᕼᑌᒪ.*" # Replace "ᖇᗩᕼᑌᒪ" with your own trigger pattern (Your telegram profile name)
+def extract_special_command_from_caption(caption):
+    """Extract special command starting with / from the caption."""
+    if not caption:
+        return None
+    words = caption.split()
+    for word in words:
+        if word.startswith('/'):
+            return word.lower()  # Return the command in lowercase
+    return None
 
-
-@app.on_message(filters.me & filters.command("ping", prefixes="!"))
-async def start(client, message):
-    await message.edit("pong!")
-
-
-@app.on_message(filters.text)
-def handle_incoming_message(client, message):
-    puzzle_text = message.text
-    if re.search(trigger_pattern, puzzle_text):
-        starting_letter_match = re.search(starting_letter_pattern, puzzle_text)
-        min_length_match = re.search(min_length_pattern, puzzle_text)
-
-        if starting_letter_match and min_length_match:
-            starting_letter = starting_letter_match.group(1)
-            min_length = int(min_length_match.group(1))
-
-            english_words = set(nltk.corpus.words.words())
-
-            valid_words = [word for word in english_words if word.startswith(starting_letter) and len(word) >= min_length]
-
-            if valid_words:
-                random_word = random.choice(valid_words)
-
-                response_message = f"{random_word}"
-                client.send_message(message.chat.id, response_message)
-            else:
-                print("No valid words found for the given criteria.")
-        else:
-            print("Criteria not found in the puzzle text.")
-    return
-    
-    
-def run():
-    server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
+@app.on_message()
+async def check_caption(client, message):
+    # Check if the message is a photo and from the target user with a command
+    if message.photo and message.from_user.id == TARGET_USER_ID:
+        command = extract_special_command_from_caption(message.caption)
+        if command:
+            # Fetch character name from the database
+            character_data = images_collection.find_one({"file_unique_id": message.photo.file_unique_id})
+            if character_data:
+                # Clean character name (remove emojis and non-alphanumeric characters)
+                character_name = re.sub(r'[^\w\s]', '', character_data['character_name'])
+                
+                # Prepare the response with the command and character name
+                response_text = f"{command} {character_name}"
+                await message.reply_text(response_text)  # Send the command and character name
 
 if __name__ == "__main__":
-    t = Thread(target=run)
-    t.start()
     app.run()
